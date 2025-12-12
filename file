@@ -117,3 +117,65 @@ public class TaskRepository {
         return jdbcTemplate.update(sql, id);
     }
 }
+@Configuration
+@EnableWebMvc
+@ComponentScan(basePackages = "com.example.productapp")
+public class AppConfig {
+
+    // View resolver -> /WEB-INF/jsp/... .jsp
+    @Bean
+    public InternalResourceViewResolver viewResolver() {
+        InternalResourceViewResolver vr = new InternalResourceViewResolver();
+        vr.setPrefix("/WEB-INF/jsp/");
+        vr.setSuffix(".jsp");
+        return vr;
+    }
+
+    // DataSource: example using DriverManagerDataSource. Swap for a connection pool in production.
+    @Bean
+    public DataSource dataSource() {
+        DriverManagerDataSource ds = new DriverManagerDataSource();
+
+        // MySQL example (change username/password)
+        ds.setDriverClassName("com.mysql.cj.jdbc.Driver");
+        ds.setUrl("jdbc:mysql://localhost:3306/productdb?useSSL=false&serverTimezone=UTC");
+        ds.setUsername("root");
+        ds.setPassword("yourpassword");
+
+        /* // For H2 in-memory testing, use:
+        ds.setDriverClassName("org.h2.Driver");
+        ds.setUrl("jdbc:h2:mem:productdb;DB_CLOSE_DELAY=-1;MODE=MySQL");
+        ds.setUsername("sa");
+        ds.setPassword("");
+        */
+        return ds;
+    }
+
+    // JdbcTemplate
+    @Bean
+    public JdbcTemplate jdbcTemplate(DataSource dataSource) {
+        return new JdbcTemplate(dataSource);
+    }
+}
+// Programmatic replacement for web.xml
+public class WebAppInitializer extends AbstractAnnotationConfigDispatcherServletInitializer {
+
+    // Root context (services, dao, datasource)
+    @Override
+    protected Class<?>[] getRootConfigClasses() {
+        return new Class[] { AppConfig.class };
+    }
+
+    // Servlet context (web mvc stuff). We can also include AppConfig here,
+    // but keeping single AppConfig simplifies things.
+    @Override
+    protected Class<?>[] getServletConfigClasses() {
+        return new Class[] { AppConfig.class };
+    }
+
+    // Map DispatcherServlet to "/"
+    @Override
+    protected String[] getServletMappings() {
+        return new String[] { "/" };
+    }
+}
