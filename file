@@ -1,0 +1,119 @@
+
+App Config................
+
+@Configuration
+@EnableWebMvc
+@ComponentScan(basePackages = "com.demo")
+@EnableAspectJAutoProxy
+@PropertySource("classpath:db.properties")
+public class AppConfig implements WebMvcConfigurer {
+
+	private Environment env; // is injected automatically when you fetch properties with
+								// env.getProperty("key")
+
+	@Bean
+	public DataSource dataSource() {
+		DriverManagerDataSource ds = new DriverManagerDataSource();
+		ds.setDriverClassName(env.getProperty("db.driverClassName"));
+		ds.setUrl(env.getProperty("db.url"));
+		ds.setUsername(env.getProperty("db.username"));
+		ds.setPassword(env.getProperty("db.password"));
+		return ds;
+	}
+
+	@Bean
+	public JdbcTemplate jdbcTemplate(DataSource ds) {
+		return new JdbcTemplate(ds);
+	}
+
+	@Bean
+	public InternalResourceViewResolver viewResolver() {
+		InternalResourceViewResolver resolver = new InternalResourceViewResolver();
+		resolver.setPrefix("/WEB-INF/views/");
+		resolver.setSuffix(".jsp");
+		resolver.setViewClass(JstlView.class);
+		return resolver;
+	}
+}
+
+
+
+// Web initializer.............
+
+public class WebInitializer implements WebApplicationInitializer {
+
+	@Override
+	public void onStartup(ServletContext servletContext) throws ServletException {
+		AnnotationConfigWebApplicationContext context = new AnnotationConfigWebApplicationContext();
+		context.register(AppConfig.class);
+
+		DispatcherServlet dispserv = new DispatcherServlet(context);
+		ServletRegistration.Dynamic registration = servletContext.addServlet("dispatcher", dispserv);
+		registration.setLoadOnStartup(1);
+		registration.addMapping("/");
+
+	}
+
+}
+
+
+
+@Repository
+public class TaskRepository {
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
+    // RowMapper
+    private Task mapRow(ResultSet rs, int rowNum) throws SQLException {
+        Task t = new Task();
+        t.setTaskid(rs.getInt("taskid"));
+        t.setTitle(rs.getString("title"));
+        t.setDescription(rs.getString("description"));
+        t.setCreatedAt(rs.getDate("created_at").toLocalDate());
+        t.setCompleted(rs.getBoolean("completed"));
+        return t;
+    }
+
+    // CREATE
+    public int addTask(Task t) {
+        String sql = "INSERT INTO tasks(title, description, created_at, completed) VALUES (?, ?, ?, ?)";
+        return jdbcTemplate.update(
+                sql,
+                t.getTitle(),
+                t.getDescription(),
+                t.getCreatedAt(),
+                t.isCompleted()
+        );
+    }
+
+    // READ (single)
+    public Task getTaskById(int id) {
+        String sql = "SELECT * FROM tasks WHERE taskid = ?";
+        return jdbcTemplate.queryForObject(sql, this::mapRow, id);
+    }
+
+    // READ all
+    public List<Task> getAllTasks() {
+        String sql = "SELECT * FROM tasks";
+        return jdbcTemplate.query(sql, this::mapRow);
+    }
+
+    // UPDATE
+    public int updateTask(Task t, int id) {
+        String sql = "UPDATE tasks SET title=?, description=?, completed=? WHERE taskid=?";
+        return jdbcTemplate.update(
+                sql,
+                t.getTitle(),
+                t.getDescription(),
+                t.isCompleted(),
+                id
+        );
+    }
+
+    // DELETE
+    public int deleteTask(int id) {
+        String sql = "DELETE FROM tasks WHERE taskid=?";
+        return jdbcTemplate.update(sql, id);
+    }
+}
