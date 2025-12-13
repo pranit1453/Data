@@ -179,3 +179,26 @@ public class WebAppInitializer extends AbstractAnnotationConfigDispatcherServlet
         return new String[] { "/" };
     }
 }
+
+
+package com.example.productapp.dao;
+
+import com.example.productapp.model.Product;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.math.BigDecimal;
+import org.springframework.jdbc.core.RowMapper;
+
+public class RowMappers {
+    public static class ProductRowMapper implements RowMapper<Product> {
+        @Override
+        public Product mapRow(ResultSet rs, int rowNum) throws SQLException {
+            Product p = new Product();
+            p.setId(rs.getLong("id"));
+            p.setName(rs.getString("name"));
+            p.setDescription(rs.getString("description"));
+            p.setPrice(rs.getBigDecimal("price"));
+            return p;
+        }
+    }
+}
